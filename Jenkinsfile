@@ -1,46 +1,59 @@
 pipeline {
     agent any
+    environment {
+        DOCKERHUB_USERNAME = "nikitazhovnirenko"
+        DOCKER_IMAGE       = "${DOCKERHUB_USERNAME}/prikm"
+        IMAGE_TAG          = "${env.BUILD_NUMBER}"
+    }
+
     stages {
         stage('Start') {
             steps {
-                echo '=== Lab_2: started by GitHub ==='
+                echo "=== Lab_2: started by GitHub ==="
             }
         }
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+
         stage('Image Build') {
             steps {
-                sh 'docker build -t prikm:latest .'
-                sh "docker tag prikm nikitazhovnirenko/prikm:latest"
-                sh "docker tag prikm nikitazhovnirenko/prikm:${BUILD_NUMBER}"
+                sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
+                sh "docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest"
             }
         }
+
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: '3824467', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh 'docker push nikitazhovnirenko/prikm:latest'
-                    sh "docker push nikitazhovnirenko/prikm:${BUILD_NUMBER}"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
+                                  usernameVariable: 'DOCKER_USER',
+                                  passwordVariable: 'DOCKER_PASS')]) {
+                    
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                        docker push ${DOCKER_IMAGE}:latest
+                    '''
                 }
             }
         }
+
         stage('Deploy') {
             steps {
-                sh '''
-                    docker stop my-web || true
-                    docker rm my-web || true
-                    docker run -d -p 80:80 --name my-web nikitazhovnirenko/prikm:latest
-                '''
-                echo '#  Application deployed successfully!'
+                echo "#  Image successfully pushed to Docker Hub"
             }
         }
-        stage('Post Actions') {
-            steps {
-                echo '=== Lab_2 completed successfully ==='
-            }
+    }
+
+    post {
+        success {
+            echo "#  #######! ##### ######## ## Docker Hub"
+        }
+        failure {
+            echo "#  Pipeline ####"
         }
     }
 }
