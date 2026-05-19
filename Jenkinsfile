@@ -21,6 +21,18 @@ pipeline {
             }
         }
 
+        stage('Create Artifact') {
+            steps {
+                sh '''
+                    echo "Build number: ${BUILD_NUMBER}" > build-info.txt
+                    echo "Build date: $(date)" >> build-info.txt
+                    echo "Docker image: ${DOCKER_IMAGE}:${IMAGE_TAG}" >> build-info.txt
+                '''
+
+                archiveArtifacts artifacts: 'build-info.txt', fingerprint: true
+            }
+        }
+
         stage('Image Build') {
             steps {
                 sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
