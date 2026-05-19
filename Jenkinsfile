@@ -8,45 +8,43 @@ pipeline {
 
             steps {
 
-                echo '=== ########### ###### #1 - ####### ==='
+                echo 'Lab_2: started by GitHub'
 
             }
 
         }
 
-        stage('Checkout') {
+        stage('Image build') {
 
             steps {
 
-                git branch: 'Lab_1', url: 'https://github.com/nikitazhovnirenkomitpa2025-star/PRIKM.git'
+                sh "docker build -t prikm:latest ."
+
+                sh "docker tag prikm nikitazhovnirenko/prikm:latest"
+
+                sh "docker tag prikm nikitazhovnirenko/prikm:\${BUILD_NUMBER}"
 
             }
 
         }
 
-        stage('Build Docker Image') {
+        stage('Push to registry') {
 
             steps {
 
-                sh 'docker build -t nginx/custom:latest .'
+                withDockerRegistry([ credentialsId: '3824467', url: '' ]) {
+
+                    sh "docker push nikitazhovnirenko/prikm:latest"
+
+                    sh "docker push nikitazhovnirenko/prikm:\${2}"
+
+                }
 
             }
 
         }
 
-        stage('Test') {
-
-            steps {
-
-                echo '########## ######## #######'
-
-                sh 'docker images | grep nginx/custom'
-
-            }
-
-        }
-
-        stage('Deploy') {
+        stage('Deploy image'){
 
             steps {
 
@@ -56,21 +54,11 @@ pipeline {
 
                     docker rm my-web || true
 
-                    docker run -d -p 80:80 --name my-web nginx/custom:latest
+                    docker run -d -p 80:80 --name my-web nikitazhovnirenko/prikm:latest
 
                 '''
 
-                echo '######### ####### ######## ## ##### 80'
-
-            }
-
-        }
-
-        stage('Post Actions') {
-
-            steps {
-
-                echo '=== ########### ###### #1 ######### ==='
+                echo '#  Container deployed successfully'
 
             }
 
@@ -79,3 +67,4 @@ pipeline {
     }
 
 }
+
