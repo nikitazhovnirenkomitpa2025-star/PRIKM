@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     environment {
         DOCKERHUB_USERNAME = "nikitazhovnirenko"
         DOCKER_IMAGE       = "${DOCKERHUB_USERNAME}/prikm"
@@ -7,6 +8,7 @@ pipeline {
     }
 
     stages {
+
         stage('Start') {
             steps {
                 echo "=== Lab_2: started by GitHub ==="
@@ -28,10 +30,13 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
-                                  usernameVariable: 'DOCKER_USER',
-                                  passwordVariable: 'DOCKER_PASS')]) {
-                    
+
+                withCredentials([usernamePassword(
+                    credentialsId: '3824467',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
@@ -43,17 +48,19 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "#  Image successfully pushed to Docker Hub"
+                echo "# Image successfully pushed to Docker Hub"
             }
         }
     }
 
     post {
+
         success {
-            echo "#  #######! ##### ######## ## Docker Hub"
+            echo "# SUCCESS! Image pushed to Docker Hub"
         }
+
         failure {
-            echo "#  Pipeline ####"
+            echo "# Pipeline FAILED"
         }
     }
 }
