@@ -8,7 +8,6 @@ pipeline {
     }
 
     stages {
-
         stage('Start') {
             steps {
                 echo "=== Lab_2: started by GitHub ==="
@@ -28,7 +27,6 @@ pipeline {
                     echo "Build date: $(date)" >> build-info.txt
                     echo "Docker image: ${DOCKER_IMAGE}:${IMAGE_TAG}" >> build-info.txt
                 '''
-
                 archiveArtifacts artifacts: 'build-info.txt', fingerprint: true
             }
         }
@@ -42,13 +40,9 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-
-                withCredentials([usernamePassword(
-                    credentialsId: '3824467',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-
+                withCredentials([usernamePassword(credentialsId: '3824467',
+                                  usernameVariable: 'DOCKER_USER',
+                                  passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
@@ -60,19 +54,25 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "# Image successfully pushed to Docker Hub"
+                echo "Image successfully pushed to Docker Hub: ${DOCKER_IMAGE}:${IMAGE_TAG}"
             }
         }
     }
 
     post {
-
         success {
-            echo "# SUCCESS! Image pushed to Docker Hub"
+            echo "SUCCESS! Image pushed to Docker Hub"
         }
-
         failure {
-            echo "# Pipeline FAILED"
+            echo "Pipeline FAILED"
+        }
+        always {
+            sh '''
+                curl -s -X POST "https://api.telegram.org/bot8536779258:AAE-EsV_vkxHYF1bClFconkVp0YQyQobI5U/sendMessage" \
+                -d chat_id=ID_CHAT \
+                -d text="Build ${JOB_NAME} #${BUILD_NUMBER} - ${currentBuild.currentResult}"
+            '''
+            echo "=== Build #${env.BUILD_NUMBER} completed ==="
         }
     }
 }
