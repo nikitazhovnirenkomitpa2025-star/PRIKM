@@ -48,12 +48,18 @@ pipeline {
     
     post {
         success {
-            telegramSend message: "#  SUCCESS! Build #${BUILD_NUMBER} completed successfully.\nEnvironment: ${params.ENVIRONMENT}\n${params.MESSAGE}", 
-                        chatId: '399053035'
+            sh """
+                curl -s -X POST https://api.telegram.org/bot8536779258:AAE-EsV_vkxHYF1bClFconkVp0YQyQobI5U/sendMessage \
+                -d chat_id=399053035 \
+                -d text="#  SUCCESS! Build #${BUILD_NUMBER} completed successfully.\\nEnvironment: ${params.ENVIRONMENT}\\n${params.MESSAGE}"
+            """
         }
         failure {
-            telegramSend message: "#  FAILED! Build #${BUILD_NUMBER} has failed.", 
-                        chatId: '399053035'
+            sh """
+                curl -s -X POST https://api.telegram.org/bot8536779258:AAE-EsV_vkxHYF1bClFconkVp0YQyQobI5U/sendMessage \
+                -d chat_id=399053035 \
+                -d text="#  FAILED! Build #${BUILD_NUMBER} has failed."
+            """
         }
         always {
             echo '=== Lab_3 finished ==='
