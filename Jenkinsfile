@@ -1,78 +1,61 @@
 pipeline {
     agent any
-
-    environment {
-        DOCKERHUB_USERNAME = "nikitazhovnirenko"
-        DOCKER_IMAGE       = "${DOCKERHUB_USERNAME}/prikm"
-        IMAGE_TAG          = "${env.BUILD_NUMBER}"
-    }
-
     stages {
         stage('Start') {
             steps {
-                echo "=== Lab_2: started by GitHub ==="
+                echo '=== Lab_2: started by GitHub ==='
             }
         }
-
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-
         stage('Create Artifact') {
             steps {
                 sh '''
-                    echo "Build number: ${BUILD_NUMBER}" > build-info.txt
-                    echo "Build date: $(date)" >> build-info.txt
-                    echo "Docker image: ${DOCKER_IMAGE}:${IMAGE_TAG}" >> build-info.txt
+                    echo "Build number: ${BUILD_NUMBER}" > build_info.txt
+                    echo "Build date: $(date)" >> build_info.txt
+                    echo "Docker image: nikitazhovnirenko/prikm:${BUILD_NUMBER}" >> build_info.txt
                 '''
-                archiveArtifacts artifacts: 'build-info.txt', fingerprint: true
+                archiveArtifacts artifacts: 'build_info.txt', fingerprint: true
             }
         }
-
         stage('Image Build') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
-                sh "docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest"
+                sh "docker build -t nikitazhovnirenko/prikm:${BUILD_NUMBER} ."
+                sh "docker tag nikitazhovnirenko/prikm:${BUILD_NUMBER} nikitazhovnirenko/prikm:latest"
             }
         }
-
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: '3824467',
-                                  usernameVariable: 'DOCKER_USER',
-                                  passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                        docker push ${DOCKER_IMAGE}:latest
-                    '''
+                withCredentials([usernamePassword(credentialsId: '3824467', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh "docker push nikitazhovnirenko/prikm:${BUILD_NUMBER}"
+                    sh 'docker push nikitazhovnirenko/prikm:latest'
                 }
             }
         }
-
         stage('Deploy') {
             steps {
-                echo "Image successfully pushed to Docker Hub: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                sh '''
+                    docker stop my-web || true
+                    docker rm my-web || true
+                    docker run -d -p 80:80 --name my-web nikitazhovnirenko/prikm:latest
+                '''
+                echo "#  Application successfully deployed!"
             }
         }
     }
-
     post {
+        always {
+            echo '=== Pipeline finished ==='
+        }
         success {
-            echo "SUCCESS! Image pushed to Docker Hub"
+            echo '#  Pipeline completed SUCCESSFULLY'
         }
         failure {
-            echo "Pipeline FAILED"
-        }
-        always {
-            sh '''
-                curl -s -X POST "https://api.telegram.org/bot8536779258:AAE-EsV_vkxHYF1bClFconkVp0YQyQobI5U/sendMessage" \
-                -d chat_id=ID_CHAT \
-                -d text="Build ${JOB_NAME} #${BUILD_NUMBER} - ${currentBuild.currentResult}"
-            '''
-            echo "=== Build #${env.BUILD_NUMBER} completed ==="
+            echo '#  Pipeline FAILED'
         }
     }
 }
